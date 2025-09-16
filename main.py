@@ -66,12 +66,29 @@ def get_dataloaders(dataset_name: str, batch_size: int = 128):
     
     return train_loader, test_loader
 
-def train_model(model, train_loader, epochs=10, lr=0.001):
-    """Train a model and return the trained model"""
+def train_model(model, train_loader, epochs=10, lr=0.001, model_name='ResNet18'):
+    """Train a model and return the trained model with training info"""
     model = model.to(device)
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
+    
+    if model_name == 'ViT':
+        # Different optimizer settings for ViT
+        optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=0.05, betas=(0.9, 0.999))
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
+        optimizer_type = 'AdamW'
+        scheduler_type = 'CosineAnnealingLR'
+        weight_decay = 0.05
+    else:
+        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
+        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
+        optimizer_type = 'Adam'
+        scheduler_type = 'StepLR'
+        weight_decay = 1e-4
+    
+    best_acc = 0
+    patience = 5
+    patience_counter = 0
+    epochs_trained = epochs
     
     model.train()
     for epoch in range(epochs):
@@ -86,6 +103,11 @@ def train_model(model, train_loader, epochs=10, lr=0.001):
             output = model(data)
             loss = criterion(output, target)
             loss.backward()
+            
+            # Gradient clipping for ViT
+            if model_name == 'ViT':
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            
             optimizer.step()
             
             running_loss += loss.item()
@@ -94,13 +116,43 @@ def train_model(model, train_loader, epochs=10, lr=0.001):
             correct += predicted.eq(target).sum().item()
             
             if batch_idx % 100 == 0:
-                print(f'Epoch: {epoch+1}, Batch: {batch_idx}, '
-                      f'Loss: {loss.item():.4f}, Acc: {100.*correct/total:.2f}%')
+                print(f'Epoch: {epoch+1}/{epochs}\tBatch: {batch_idx}\t'
+                      f'Loss: {loss.item():.4f}\tAcc: {100.*correct/total:.2f}%')
+        
+        epoch_acc = 100.*correct/total
+        print(f'Epoch: {epoch+1} completed. Accuracy: {epoch_acc:.2f}%\n')
+        
+        # Early stopping for ViT
+        if model_name == 'ViT':
+            if epoch_acc > best_acc:
+                best_acc = epoch_acc
+                patience_counter = 0
+            else:
+                patience_counter += 1
+                
+            if patience_counter >= patience and epoch > 10:  # Only after minimum epochs
+                print(f'Early stopping at epoch {epoch+1}. Best accuracy: {best_acc:.2f}%')
+                epochs_trained = epoch + 1
+                break
         
         scheduler.step()
-        print(f'Epoch {epoch+1} completed. Accuracy: {100.*correct/total:.2f}%')
     
-    return model
+    # Store training parameters
+    training_params = {
+        'epochs': epochs_trained,
+        'learning_rate': lr,
+        'optimizer': optimizer_type,
+        'scheduler': scheduler_type,
+        'weight_decay': weight_decay,
+        'criterion': 'CrossEntropyLoss'
+    }
+    
+    if model_name == 'ViT':
+        training_params['gradient_clipping'] = 1.0
+        training_params['early_stopping'] = True
+        training_params['patience'] = patience
+    
+    return model, training_params
 
 def evaluate_model(model, test_loader):
     """Evaluate model accuracy on test set"""
@@ -120,7 +172,7 @@ def evaluate_model(model, test_loader):
     print(f'Clean Accuracy: {accuracy:.2f}%')
     return accuracy
 
-def visualize_clean_accuracy(results, save_path='clean_accuracy.png'):
+def visualize_clean_accuracy(results, save_path='results/clean_accuracy.png'):
     """Create visualization showing clean accuracy for all models and datasets"""
     datasets = ['MNIST', 'CIFAR-10']
     models = ['ResNet18', 'ViT']
@@ -159,7 +211,7 @@ def visualize_clean_accuracy(results, save_path='clean_accuracy.png'):
     
     plt.tight_layout()
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
-    plt.show()
+    plt.close()
     print(f"Clean accuracy plot saved to: {save_path}")
 
 def visualize_attacks(model, test_subset, epsilon=8/255, num_samples=10, 
@@ -264,38 +316,45 @@ def task1():
         models = {
             'ResNet18': ResNet18(num_classes=10, in_channels=in_channels),
             'ViT': VisionTransformer(img_size=img_size, patch_size=4, in_channels=in_channels,
-                                   num_classes=10, embed_dim=192, depth=6, n_heads=3)
+                                   num_classes=10, embed_dim=256, depth=8, n_heads=4, dropout=0.1)
         }
         
         dataset_results = {}
         
         for model_name, model in models.items():
-            print(f"\n{model_name} on {dataset_name}:")
+            print(f"\n{model_name} on {dataset_name}:\n")
             
             model_path = f'./models/{model_name}_{dataset_name}.pth'
             
-            # Train or load model
-            if Path(model_path).exists():
-                print(f"Loading existing model from {model_path}")
-                model.load_state_dict(torch.load(model_path, map_location=device))
-            else:
-                print(f"Training new model...")
-                epochs = 15 if dataset_name == 'cifar10' else 10
-                lr = 0.001 if model_name == 'ResNet18' else 0.0005
-                model = train_model(model, train_loader, epochs=epochs, lr=lr)
-                torch.save(model.state_dict(), model_path)
+            # Train model
+            print(f"Training new model...")
+            epochs = 25 if dataset_name == 'cifar10' else 10
+            lr = 0.001 if model_name == 'ResNet18' else 0.00025
+            model, training_params = train_model(model, train_loader, epochs=epochs, lr=lr, model_name=model_name)
+            torch.save(model.state_dict(), model_path)
             
             # Evaluate clean accuracy
             clean_acc = evaluate_model(model, test_loader)
-            dataset_results[model_name] = clean_acc
+            
+            # Store results with training parameters
+            dataset_results[model_name] = {
+                'clean_accuracy': clean_acc,
+                'training_parameters': training_params
+            }
         
         clean_results[dataset_name] = dataset_results
     
-    # Create visualization
-    visualize_clean_accuracy(clean_results)
+    # Create visualization (using clean accuracy values)
+    viz_results = {}
+    for dataset in clean_results:
+        viz_results[dataset] = {}
+        for model in clean_results[dataset]:
+            viz_results[dataset][model] = clean_results[dataset][model]['clean_accuracy']
     
-    # Save results
-    with open('./clean_accuracy_results.json', 'w') as f:
+    visualize_clean_accuracy(viz_results)
+    
+    # Save results with training parameters
+    with open('./results/clean_accuracy_results.json', 'w') as f:
         json.dump(clean_results, f, indent=2)
     
     print("\n" + "="*60)
@@ -304,7 +363,7 @@ def task1():
     for dataset in clean_results:
         print(f"\n{dataset.upper()}:")
         for model in clean_results[dataset]:
-            print(f"  {model}: {clean_results[dataset][model]:.2f}%")
+            print(f"  {model}: {clean_results[dataset][model]['clean_accuracy']:.2f}%")
 
 def task2():
     """Task 2: Full FGSM evaluation with all metrics"""
@@ -437,12 +496,15 @@ def task2():
 
 def main():
     parser = argparse.ArgumentParser(description='FGSM Attack Implementation')
-    parser.add_argument('--task', type=int, choices=[1, 2], required=True,
-                       help='Task to run: 1 = Train models and show accuracy, 2 = Full FGSM evaluation')
+    parser.add_argument('--task', type=int, choices=[0, 1, 2], default=0,
+                       help='Task to run: 0 = Run both tasks, 1 = Train models and show accuracy, 2 = Full FGSM evaluation')
     
     args = parser.parse_args()
     
-    if args.task == 1:
+    if args.task == 0:
+        task1()
+        task2()
+    elif args.task == 1:
         task1()
     elif args.task == 2:
         task2()

@@ -78,6 +78,7 @@ class VisionTransformer(nn.Module):
         ])
         
         self.norm = nn.LayerNorm(embed_dim)
+        self.head_dropout = nn.Dropout(0.3 if embed_dim > 200 else dropout) # Add dropout before final classifier
         self.head = nn.Linear(embed_dim, num_classes)
         
         # Initialize weights

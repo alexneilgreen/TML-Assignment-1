@@ -1,0 +1,92 @@
+{
+  "mnist": {
+    "ResNet18": {
+      "clean_accuracy": 99.61,
+      "training_parameters": {
+        "epochs": 10,
+        "learning_rate": 0.001,
+        "optimizer": "Adam",
+        "scheduler": "StepLR",
+        "weight_decay": 0.0001,
+        "criterion": "CrossEntropyLoss"
+      },
+      "model_architecture": {
+        "in_channels": 1,
+        "num_classes": 10,
+        "img_size": null,
+        "patch_size": null,
+        "embed_dim": null,
+        "depth": null,
+        "n_heads": null
+      }
+    },
+    "ViT": {
+      "clean_accuracy": 97.91,
+      "training_parameters": {
+        "epochs": 10,
+        "learning_rate": 0.0003,
+        "optimizer": "AdamW",
+        "scheduler": "CosineAnnealingLR",
+        "weight_decay": 0.05,
+        "criterion": "CrossEntropyLoss",
+        "gradient_clipping": 1.0,
+        "early_stopping": true,
+        "patience": 5
+      },
+      "model_architecture": {
+        "in_channels": 1,
+        "num_classes": 10,
+        "img_size": 28,
+        "patch_size": 4,
+        "embed_dim": 192,
+        "depth": 6,
+        "n_heads": 3
+      }
+    }
+  },
+  "cifar10": {
+    "ResNet18": {
+      "clean_accuracy": 88.78,
+      "training_parameters": {
+        "epochs": 20,
+        "learning_rate": 0.001,
+        "optimizer": "Adam",
+        "scheduler": "StepLR",
+        "weight_decay": 0.0001,
+        "criterion": "CrossEntropyLoss"
+      },
+      "model_architecture": {
+        "in_channels": 3,
+        "num_classes": 10,
+        "img_size": null,
+        "patch_size": null,
+        "embed_dim": null,
+        "depth": null,
+        "n_heads": null
+      }
+    },
+    "ViT": {
+      "clean_accuracy": 73.61,
+      "training_parameters": {
+        "epochs": 20,
+        "learning_rate": 0.0003,
+        "optimizer": "AdamW",
+        "scheduler": "CosineAnnealingLR",
+        "weight_decay": 0.05,
+        "criterion": "CrossEntropyLoss",
+        "gradient_clipping": 1.0,
+        "early_stopping": true,
+        "patience": 5
+      },
+      "model_architecture": {
+        "in_channels": 3,
+        "num_classes": 10,
+        "img_size": 32,
+        "patch_size": 4,
+        "embed_dim": 192,
+        "depth": 6,
+        "n_heads": 3
+      }
+    }
+  }
+}
