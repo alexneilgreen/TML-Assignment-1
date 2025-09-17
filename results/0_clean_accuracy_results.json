@@ -1,0 +1,56 @@
+{
+  "mnist": {
+    "ResNet18": {
+      "clean_accuracy": 99.46,
+      "training_parameters": {
+        "epochs": 10,
+        "learning_rate": 0.001,
+        "optimizer": "Adam",
+        "scheduler": "StepLR",
+        "weight_decay": 0.0001,
+        "criterion": "CrossEntropyLoss"
+      }
+    },
+    "ViT": {
+      "clean_accuracy": 97.97,
+      "training_parameters": {
+        "epochs": 10,
+        "learning_rate": 0.00025,
+        "optimizer": "AdamW",
+        "scheduler": "CosineAnnealingLR",
+        "weight_decay": 0.05,
+        "criterion": "CrossEntropyLoss",
+        "gradient_clipping": 1.0,
+        "early_stopping": true,
+        "patience": 5
+      }
+    }
+  },
+  "cifar10": {
+    "ResNet18": {
+      "clean_accuracy": 88.17,
+      "training_parameters": {
+        "epochs": 30,
+        "learning_rate": 0.001,
+        "optimizer": "Adam",
+        "scheduler": "StepLR",
+        "weight_decay": 0.0001,
+        "criterion": "CrossEntropyLoss"
+      }
+    },
+    "ViT": {
+      "clean_accuracy": 80.4,
+      "training_parameters": {
+        "epochs": 30,
+        "learning_rate": 0.00025,
+        "optimizer": "AdamW",
+        "scheduler": "CosineAnnealingLR",
+        "weight_decay": 0.05,
+        "criterion": "CrossEntropyLoss",
+        "gradient_clipping": 1.0,
+        "early_stopping": true,
+        "patience": 5
+      }
+    }
+  }
+}

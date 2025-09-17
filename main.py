@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, Subset
 import torchvision
 import torchvision.transforms as transforms
+import csv
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -184,7 +185,7 @@ def train_model(model, train_loader, epochs=10, lr=0.001, model_name='ResNet18',
             'training_parameters': training_params
         }
         
-        with open(f'./results/{save_name}_training.json', 'w') as f:
+        with open(f'./results/!{save_name}_training.json', 'w') as f:
             json.dump(training_data, f, indent=2)
     
     return model, training_params
@@ -207,7 +208,7 @@ def evaluate_model(model, test_loader):
     print(f'Clean Accuracy: {accuracy:.2f}%')
     return accuracy
 
-def visualize_clean_accuracy(results, save_path='results/clean_accuracy.png'):
+def visualize_clean_accuracy(results, save_path='results/1_clean_accuracy.png'):
     """Create visualization showing clean accuracy with target lines"""
     datasets = ['MNIST', 'CIFAR-10']
     models = ['ResNet18', 'ViT']
@@ -260,10 +261,10 @@ def visualize_clean_accuracy(results, save_path='results/clean_accuracy.png'):
 def visualize_training_curves():
     """Create training curves visualization"""
     training_files = [
-        ('resnet18_mnist_training.json', 'ResNet18 MNIST', 'red'),
-        ('resnet18_cifar10_training.json', 'ResNet18 CIFAR-10', 'blue'),
-        ('vit_mnist_training.json', 'ViT MNIST', 'green'),
-        ('vit_cifar10_training.json', 'ViT CIFAR-10', 'orange')
+        ('!resnet18_mnist_training.json', 'ResNet18 MNIST', 'red'),
+        ('!resnet18_cifar10_training.json', 'ResNet18 CIFAR-10', 'blue'),
+        ('!vit_mnist_training.json', 'ViT MNIST', 'green'),
+        ('!vit_cifar10_training.json', 'ViT CIFAR-10', 'orange')
     ]
     
     plt.figure(figsize=(12, 8))
@@ -281,16 +282,36 @@ def visualize_training_curves():
             
             plt.plot(epochs, accuracies, color=color, label=label, linewidth=2, marker='o', markersize=4)
             
-            # Add final accuracy point
-            final_acc = data['final_accuracy']
-            plt.scatter(epochs[-1], final_acc, color=color, s=100, marker='s', 
-                       edgecolors='black', linewidth=1, zorder=5)
-            plt.annotate(f'{final_acc:.1f}%', 
-                        xy=(epochs[-1], final_acc), 
-                        xytext=(5, 5), 
-                        textcoords='offset points',
-                        fontweight='bold',
-                        color=color)
+            # Get clean accuracy from results file
+            clean_acc_file = './results/0_clean_accuracy_results.json'
+            if Path(clean_acc_file).exists():
+                with open(clean_acc_file, 'r') as f:
+                    clean_results = json.load(f)
+                
+                # Extract clean accuracy based on filename
+                if 'mnist' in filename and 'resnet' in filename:
+                    clean_acc = clean_results['mnist']['ResNet18']['clean_accuracy']
+
+                elif 'mnist' in filename and 'vit' in filename:
+                    clean_acc = clean_results['mnist']['ViT']['clean_accuracy']
+
+                elif 'cifar' in filename and 'resnet' in filename:
+                    clean_acc = clean_results['cifar10']['ResNet18']['clean_accuracy']
+
+                elif 'cifar' in filename and 'vit' in filename:
+                    clean_acc = clean_results['cifar10']['ViT']['clean_accuracy']
+                    
+                else:
+                    break
+                
+                plt.scatter(epochs[-1], clean_acc, color=color, s=100, marker='s', 
+                        edgecolors='black', linewidth=1, zorder=5)
+                plt.annotate(f'{clean_acc:.1f}%', 
+                            xy=(epochs[-1], clean_acc), 
+                            xytext=(5, 5), 
+                            textcoords='offset points',
+                            fontweight='bold',
+                color=color)
     
     plt.xlabel('Epoch')
     plt.ylabel('Training Accuracy (%)')
@@ -300,9 +321,9 @@ def visualize_training_curves():
     plt.xlim(0, max_epochs + 1)
     
     plt.tight_layout()
-    plt.savefig('./results/clean_training.png', dpi=150, bbox_inches='tight')
+    plt.savefig('./results/2_clean_training.png', dpi=150, bbox_inches='tight')
     plt.close()
-    print("Training curves plot saved to: ./results/clean_training.png")
+    print("Training curves plot saved to: ./results/2_clean_training.png")
 
 def visualize_attacks(model, test_subset, epsilon=8/255, num_samples=10, 
                      dataset_name='cifar10', model_name='ResNet18'):
@@ -326,8 +347,8 @@ def visualize_attacks(model, test_subset, epsilon=8/255, num_samples=10,
     
     # Convert to numpy for visualization
     data_np = data.cpu().numpy()
-    adv_data_np = adv_data.cpu().numpy()
-    perturbation_np = perturbation.cpu().numpy()
+    adv_data_np = adv_data.detach().cpu().numpy()
+    perturbation_np = perturbation.detach().cpu().numpy()
     
     # Create visualization
     fig, axes = plt.subplots(3, num_samples, figsize=(15, 6))
@@ -354,7 +375,7 @@ def visualize_attacks(model, test_subset, epsilon=8/255, num_samples=10,
             pert_vis = np.transpose(perturbation_np[i], (1, 2, 0)) * 10
             pert_vis = np.clip(pert_vis + 0.5, 0, 1)  # Center around 0.5 for visualization
             axes[1, i].imshow(pert_vis)
-        axes[1, i].set_title('Perturbation (×10)')
+        axes[1, i].set_title('Perturbation')
         axes[1, i].axis('off')
         
         # Adversarial
@@ -370,10 +391,87 @@ def visualize_attacks(model, test_subset, epsilon=8/255, num_samples=10,
         axes[2, i].axis('off')
     
     plt.tight_layout()
-    save_path = f'fgsm_visualization_{model_name}_{dataset_name}_{epsilon*255:.0f}.png'
+    save_path = f'./results/3_fgsm_visualization_{model_name}_{dataset_name}_{epsilon*255:.0f}.png'
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
-    plt.show()
+    plt.close()
     print(f"Attack visualization saved to: {save_path}")
+
+def generate_results_table():
+    """Generate CSV tables with results for each dataset"""
+    
+    # Load results
+    results_file = './results/0_fgsm_task2_results.json'
+    if not Path(results_file).exists():
+        print(f"Results file {results_file} not found!")
+        return
+    
+    with open(results_file, 'r') as f:
+        results = json.load(f)
+    
+    # Define epsilon values and headers
+    epsilons = ['0.00392156862745098', '0.00784313725490196', '0.01568627450980392', '0.03137254901960784']  # 1/255, 2/255, 4/255, 8/255
+    eps_labels = ['1/255', '2/255', '4/255', '8/255']
+    
+    headers = ['Model', 'Clean Acc (%)', 'Robust Acc 1/255 (%)', 'Robust Acc 2/255 (%)', 
+               'Robust Acc 4/255 (%)', 'Robust Acc 8/255 (%)', 'ASR Untargeted 8/255 (%)', 
+               'ASR Random Target 8/255 (%)', 'ASR Least-Likely 8/255 (%)']
+    
+    # Generate table for each dataset
+    for dataset_name in ['mnist', 'cifar10']:
+        if dataset_name not in results:
+            print(f"Dataset {dataset_name} not found in results!")
+            continue
+            
+        # Create CSV filename
+        csv_filename = f'./results/4_table_{dataset_name}_results.csv'
+        
+        with open(csv_filename, 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            
+            # Write header
+            writer.writerow(headers)
+            
+            # Write data for each model
+            for model_name in ['ResNet18', 'ViT']:
+                if model_name not in results[dataset_name]:
+                    continue
+                    
+                model_results = results[dataset_name][model_name]
+                
+                row = [model_name]
+                
+                # Clean accuracy
+                row.append(f"{model_results['clean_acc']:.2f}")
+                
+                # Robust accuracy for each epsilon
+                for eps in epsilons:
+                    if eps in model_results['robust_acc']:
+                        row.append(f"{model_results['robust_acc'][eps]:.2f}")
+                    else:
+                        row.append("N/A")
+                
+                # ASR Untargeted (8/255)
+                eps_8 = epsilons[3]  # 8/255
+                if eps_8 in model_results['untargeted_asr']:
+                    row.append(f"{model_results['untargeted_asr'][eps_8]:.2f}")
+                else:
+                    row.append("N/A")
+                
+                # ASR Random Target (8/255)
+                if eps_8 in model_results['targeted_asr_random']:
+                    row.append(f"{model_results['targeted_asr_random'][eps_8]:.2f}")
+                else:
+                    row.append("N/A")
+                
+                # ASR Least-Likely (8/255)
+                if eps_8 in model_results['targeted_asr_least_likely']:
+                    row.append(f"{model_results['targeted_asr_least_likely'][eps_8]:.2f}")
+                else:
+                    row.append("N/A")
+                
+                writer.writerow(row)
+        
+        print(f"Table saved to: {csv_filename}")
 
 def task1():
     """Task 1: Train models and show clean accuracy"""
@@ -411,13 +509,27 @@ def task1():
             # Create model
             model = config[model_name]()
             
-            # Train model
-            print(f"Training new model...")
-            epochs = 30 if dataset_name == 'cifar10' else 10
-            lr = 0.001 if model_name == 'ResNet18' else 0.00025
-            model, training_params = train_model(model, train_loader, epochs=epochs, 
-                                               lr=lr, model_name=model_name, save_name=save_name)
-            torch.save(model.state_dict(), model_path)
+            # Check if model already exists
+            if Path(model_path).exists():
+                print(f"Loading existing model from {model_path}")
+                model.load_state_dict(torch.load(model_path, map_location=device))
+                model = model.to(device)
+                
+                # Try to load existing training parameters
+                training_json_path = f'./results/!{save_name}_training.json'
+                if Path(training_json_path).exists():
+                    with open(training_json_path, 'r') as f:
+                        training_data = json.load(f)
+                        training_params = training_data.get('training_parameters', {})
+                else:
+                    training_params = {}
+            else:
+                print(f"Training new model...")
+                epochs = 30 if dataset_name == 'cifar10' else 10
+                lr = 0.001 if model_name == 'ResNet18' else 0.00025
+                model, training_params = train_model(model, train_loader, epochs=epochs, 
+                                                lr=lr, model_name=model_name, save_name=save_name)
+                torch.save(model.state_dict(), model_path)
             
             # Evaluate clean accuracy
             clean_acc = evaluate_model(model, test_loader)
@@ -441,7 +553,7 @@ def task1():
     visualize_training_curves()
     
     # Save results with training parameters
-    with open('./results/clean_accuracy_results.json', 'w') as f:
+    with open('./results/0_clean_accuracy_results.json', 'w') as f:
         json.dump(clean_results, f, indent=2)
     
     print("\n" + "="*60)
@@ -504,11 +616,13 @@ def task2():
             if Path(model_path).exists():
                 print(f"Loading model from {model_path}")
                 model.load_state_dict(torch.load(model_path, map_location=device))
+                model = model.to(device)
             else:
                 print(f"Model not found! Training new model...")
-                epochs = 15 if dataset_name == 'cifar10' else 10
-                lr = 0.001 if model_name == 'ResNet18' else 0.0005
-                model, _ = train_model(model, train_loader, epochs=epochs, lr=lr, model_name=model_name)
+                epochs = 30 if dataset_name == 'cifar10' else 10
+                lr = 0.001 if model_name == 'ResNet18' else 0.00025
+                save_name = f'{model_name.lower()}_{dataset_name}'
+                model, _ = train_model(model, train_loader, epochs=epochs, lr=lr, model_name=model_name, save_name=save_name)
                 torch.save(model.state_dict(), model_path)
             
             # Evaluate robustness
@@ -557,7 +671,7 @@ def task2():
             print(row)
     
     # Save results
-    with open('./results/fgsm_task2_results.json', 'w') as f:
+    with open('./results/0_fgsm_task2_results.json', 'w') as f:
         json_results = {}
         for dataset in all_results:
             json_results[dataset] = {}
@@ -571,77 +685,16 @@ def task2():
         
         json.dump(json_results, f, indent=2)
     
-    print(f"\nResults saved to ./results/fgsm_task2_results.json")
-
-def task3():
-    """Task 3: Train only ViT on CIFAR-10 (temporary for testing)"""
-    print("="*60)
-    print("TASK 3: Training ViT on CIFAR-10 only (testing)")
-    print("="*60)
+    print(f"\nResults saved to ./results/0_fgsm_task2_results.json")
     
-    dataset_name = 'cifar10'
-    model_configs = get_model_configs()
-    
-    # Create directories
-    Path('./models').mkdir(exist_ok=True)
-    Path('./results').mkdir(exist_ok=True)
-    
-    print(f"\n{'-'*40}")
-    print(f"Processing {dataset_name.upper()} dataset")
-    print(f"{'-'*40}")
-    
-    # Load data
-    train_loader, test_loader = get_dataloaders(dataset_name)
-    
-    # Get model configurations
-    config = model_configs[dataset_name]
-    
-    model_name = 'ViT'
-    print(f"\n{model_name} on {dataset_name}:\n")
-    
-    model_path = f'./models/{model_name}_{dataset_name}.pth'
-    save_name = f'{model_name.lower()}_{dataset_name}'
-    
-    # Create model
-    model = config[model_name]()
-    
-    # Train model
-    print(f"Training new model...")
-    epochs = 30
-    lr = 0.00025
-    model, training_params = train_model(model, train_loader, epochs=epochs, 
-                                       lr=lr, model_name=model_name, save_name=save_name)
-    torch.save(model.state_dict(), model_path)
-    
-    # Evaluate clean accuracy
-    clean_acc = evaluate_model(model, test_loader)
-    
-    # Store results
-    results = {
-        dataset_name: {
-            model_name: {
-                'clean_accuracy': clean_acc,
-                'training_parameters': training_params
-            }
-        }
-    }
-    
-    # Save results
-    with open('./results/task3_results.json', 'w') as f:
-        json.dump(results, f, indent=2)
-    
-    print("\n" + "="*60)
-    print("TASK 3 SUMMARY")
-    print("="*60)
-    print(f"{dataset_name.upper()}:")
-    print(f"  {model_name}: {clean_acc:.2f}%")
-    
-    return results
+    # Generate CSV tables
+    print(f"\nGenerating CSV tables...")
+    generate_results_table()
 
 def main():
     parser = argparse.ArgumentParser(description='FGSM Attack Implementation')
-    parser.add_argument('--task', type=int, choices=[0, 1, 2, 3], default=0,
-                       help='Task to run: 0 = Run both tasks, 1 = Train models and show accuracy, 2 = Full FGSM evaluation, 3 = Test ViT CIFAR-10 only')
+    parser.add_argument('--task', type=int, choices=[0, 1, 2], default=0,
+                       help='Task to run: 0 = Run both tasks, 1 = Train models and show accuracy, 2 = Full FGSM evaluation')
     
     args = parser.parse_args()
     
@@ -652,8 +705,6 @@ def main():
         task1()
     elif args.task == 2:
         task2()
-    elif args.task == 3:
-        task3()
 
 if __name__ == "__main__":
     main()
