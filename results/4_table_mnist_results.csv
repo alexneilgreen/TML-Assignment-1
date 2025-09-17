@@ -1,3 +1,0 @@
-Model,Clean Acc (%),Robust Acc 1/255 (%),Robust Acc 2/255 (%),Robust Acc 4/255 (%),Robust Acc 8/255 (%),ASR Untargeted 8/255 (%),ASR Random Target 8/255 (%),ASR Least-Likely 8/255 (%)
-ResNet18,99.70,9.70,9.70,9.70,9.70,90.30,9.60,0.00
-ViT,98.60,33.00,33.10,33.10,32.90,67.10,7.90,0.20

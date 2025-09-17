@@ -208,8 +208,10 @@ def evaluate_model(model, test_loader):
     print(f'Clean Accuracy: {accuracy:.2f}%')
     return accuracy
 
-def visualize_clean_accuracy(results, save_path='results/1_clean_accuracy.png'):
+def visualize_clean_accuracy(results):
     """Create visualization showing clean accuracy with target lines"""
+    save_path = './results/1_clean_accuracy.png'
+    
     datasets = ['MNIST', 'CIFAR-10']
     models = ['ResNet18', 'ViT']
     
@@ -256,10 +258,12 @@ def visualize_clean_accuracy(results, save_path='results/1_clean_accuracy.png'):
     plt.tight_layout()
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"Clean accuracy plot saved to: {save_path}")
+    print(f"Clean accuracy visualization completed: {save_path}")
 
 def visualize_training_curves():
     """Create training curves visualization"""
+    save_path = './results/2_clean_training.png'
+    
     training_files = [
         ('!resnet18_mnist_training.json', 'ResNet18 MNIST', 'red'),
         ('!resnet18_cifar10_training.json', 'ResNet18 CIFAR-10', 'blue'),
@@ -321,13 +325,15 @@ def visualize_training_curves():
     plt.xlim(0, max_epochs + 1)
     
     plt.tight_layout()
-    plt.savefig('./results/2_clean_training.png', dpi=150, bbox_inches='tight')
+    plt.savefig(save_path, dpi=150, bbox_inches='tight')
     plt.close()
-    print("Training curves plot saved to: ./results/2_clean_training.png")
+    print(f"Training curves visualization completed: {save_path}")
 
 def visualize_attacks(model, test_subset, epsilon=8/255, num_samples=10, 
                      dataset_name='cifar10', model_name='ResNet18'):
     """Visualize original, perturbation, and adversarial examples"""
+    save_path = f'./results/3_fgsm_visualization_{model_name}_{dataset_name}_{epsilon*255:.0f}.png'
+    
     model.eval()
     
     # Get first batch
@@ -391,10 +397,9 @@ def visualize_attacks(model, test_subset, epsilon=8/255, num_samples=10,
         axes[2, i].axis('off')
     
     plt.tight_layout()
-    save_path = f'./results/3_fgsm_visualization_{model_name}_{dataset_name}_{epsilon*255:.0f}.png'
     plt.savefig(save_path, dpi=150, bbox_inches='tight')
     plt.close()
-    print(f"Attack visualization saved to: {save_path}")
+    print(f"Attack visualization completed: {save_path}")
 
 def generate_results_table():
     """Generate CSV tables with results for each dataset"""
@@ -410,7 +415,6 @@ def generate_results_table():
     
     # Define epsilon values and headers
     epsilons = ['0.00392156862745098', '0.00784313725490196', '0.01568627450980392', '0.03137254901960784']  # 1/255, 2/255, 4/255, 8/255
-    eps_labels = ['1/255', '2/255', '4/255', '8/255']
     
     headers = ['Model', 'Clean Acc (%)', 'Robust Acc 1/255 (%)', 'Robust Acc 2/255 (%)', 
                'Robust Acc 4/255 (%)', 'Robust Acc 8/255 (%)', 'ASR Untargeted 8/255 (%)', 
@@ -423,9 +427,9 @@ def generate_results_table():
             continue
             
         # Create CSV filename
-        csv_filename = f'./results/4_table_{dataset_name}_results.csv'
+        save_path = f'./results/4_table_{dataset_name}_results.csv'
         
-        with open(csv_filename, 'w', newline='') as csvfile:
+        with open(save_path, 'w', newline='') as csvfile:
             writer = csv.writer(csvfile)
             
             # Write header
@@ -471,7 +475,7 @@ def generate_results_table():
                 
                 writer.writerow(row)
         
-        print(f"Table saved to: {csv_filename}")
+        print(f"Results Table Generation Completed: {save_path}")
 
 def task1():
     """Task 1: Train models and show clean accuracy"""
