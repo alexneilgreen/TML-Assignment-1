@@ -15,7 +15,7 @@ pip install torch torchvision matplotlib numpy
 ```
 ├── main.py                   # Main execution file with task selection
 ├── resnet.py                 # ResNet-18 implementation
-├── vit.py                    # Vision Transformer implementation  
+├── vit.py                    # Vision Transformer implementation
 ├── fgsm.py                   # FGSM attack functions and evaluation
 ├── README.md                 # This file
 ├── data/                     # Dataset downloads (auto-created)
@@ -26,16 +26,19 @@ pip install torch torchvision matplotlib numpy
 ## Exact Reproduction Commands
 
 ### Run Complete Pipeline
+
 ```bash
 python main.py
 ```
 
 ### Train Models and Evaluate Clean Accuracy
+
 ```bash
 python main.py --task 1
 ```
 
-### Full FGSM Attack Evaluation  
+### Full FGSM Attack Evaluation
+
 ```bash
 python main.py --task 2
 ```
@@ -43,6 +46,7 @@ python main.py --task 2
 ## Expected Output Files
 
 **Task 1 generates:**
+
 - `!resnet18_mnist_training.json` - Training parameters
 - `!resnet18_cifar10_training.json` - Training parameters
 - `!vit_mnist_training.json` - Training parameters
@@ -52,6 +56,7 @@ python main.py --task 2
 - `2_clean_training.png` - Training curves visualization
 
 **Task 2 generates:**
+
 - `0_fgsm_task2_results.json` - Complete attack evaluation results
 - `3_fgsm_visualization_ResNet18_mnist_8.png` - Attack visualizations (ε=8/255)
 - `3_fgsm_visualization_ViT_mnist_8.png` - Attack visualizations (ε=8/255)
@@ -63,11 +68,13 @@ python main.py --task 2
 ## Model Configurations
 
 **ResNet-18:**
+
 - Adapted for 28×28 (MNIST) and 32×32 (CIFAR-10) inputs
 - Training: 10 epochs (MNIST), 30 epochs (CIFAR-10)
 - Learning rate: 0.001, Adam optimizer
 
 **Vision Transformer:**
+
 - Patch size: 4×4, Embed dim: 256, Depth: 8, Heads: 4
 - Training: 10 epochs (MNIST), 30 epochs (CIFAR-10) with early stopping
 - Learning rate: 0.00025, AdamW optimizer with cosine annealing
@@ -75,11 +82,13 @@ python main.py --task 2
 ## FGSM Implementation
 
 **Untargeted Attack:**
+
 ```
 x_adv = x + ε × sign(∇_x L(θ, x, y_true))
 ```
 
-**Targeted Attack:**  
+**Targeted Attack:**
+
 ```
 x_adv = x - ε × sign(∇_x L(θ, x, y_target))
 ```
@@ -104,8 +113,9 @@ x_adv = x - ε × sign(∇_x L(θ, x, y_target))
 ## FGSM Visualizations
 
 Attack visualizations show 10 examples per model/dataset with:
+
 - **Row 1**: Original images with predictions/confidence
-- **Row 2**: Perturbations (×10 magnification for visibility)  
+- **Row 2**: Perturbations (×10 magnification for visibility)
 - **Row 3**: Adversarial images with new predictions/confidence
 
 ## Reproducibility Settings
@@ -126,3 +136,7 @@ Attack visualizations show 10 examples per model/dataset with:
 - GPU highly recommended for training
 - All file paths relative to script directory
 - Models automatically saved/loaded to avoid retraining
+
+## Github
+
+https://github.com/alexneilgreen/TML-Assignment-1
